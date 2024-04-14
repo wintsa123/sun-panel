@@ -134,11 +134,11 @@ function handleRightMenuSelect(key: string | number) {
       window.open(jumpUrl)
       break
     case 'openWanUrl':
-      if (currentRightSelectItem.value)
+      if (currentRightSelectItem.value && isLocalUrl(window.location.origin))
         openPage(currentRightSelectItem.value?.openMethod, currentRightSelectItem.value?.url, currentRightSelectItem.value?.title)
       break
     case 'openLanUrl':
-      if (currentRightSelectItem.value && currentRightSelectItem.value.lanUrl)
+      if (currentRightSelectItem.value && !isLocalUrl(window.location.origin) &&currentRightSelectItem.value.lanUrl )
         openPage(currentRightSelectItem.value?.openMethod, currentRightSelectItem.value.lanUrl, currentRightSelectItem.value?.title)
       break
     case 'edit':
@@ -193,15 +193,7 @@ function handleEditSuccess(item: Panel.ItemInfo) {
   getList()
 }
 
-function handleChangeNetwork(mode: PanelStateNetworkModeEnum) {
-  panelState.setNetworkMode(mode)
-  if (mode === PanelStateNetworkModeEnum.lan)
 
-    ms.success(t('panelHome.changeToLanModelSuccess'))
-
-  else
-    ms.success(t('panelHome.changeToWanModelSuccess'))
-}
 
 // 结束拖拽
 // function handleEndDrag(event: any, itemIconGroup: Panel.ItemIconGroup) {
@@ -513,23 +505,7 @@ function handleAddItem(itemIconGroupId?: number) {
     <div class="fixed-element shadow-[0_0_10px_2px_rgba(0,0,0,0.2)]">
       <NButtonGroup vertical>
         <!-- 网络模式切换按钮组 -->
-        <NButton
-          v-if="panelState.networkMode === PanelStateNetworkModeEnum.lan && panelState.panelConfig.netModeChangeButtonShow"
-          color="#2a2a2a6b" :title="t('panelHome.changeToWanModel')"
-          @click="handleChangeNetwork(PanelStateNetworkModeEnum.wan)">
-          <template #icon>
-            <SvgIcon class="text-white font-xl" icon="material-symbols:lan-outline-rounded" />
-          </template>
-        </NButton>
-
-        <NButton
-          v-if="panelState.networkMode === PanelStateNetworkModeEnum.wan && panelState.panelConfig.netModeChangeButtonShow"
-          color="#2a2a2a6b" :title="t('panelHome.changeToLanModel')"
-          @click="handleChangeNetwork(PanelStateNetworkModeEnum.lan)">
-          <template #icon>
-            <SvgIcon class="text-white font-xl" icon="mdi:wan" />
-          </template>
-        </NButton>
+  
 
         <NButton v-if="authStore.visitMode === VisitMode.VISIT_MODE_LOGIN" color="#2a2a2a6b"
           @click="settingModalShow = !settingModalShow">

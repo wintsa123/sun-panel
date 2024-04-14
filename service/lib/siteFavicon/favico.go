@@ -26,7 +26,14 @@ func IsHTTPURL(url string) bool {
 	return match
 }
 
-func GetOneFaviconURL(urlStr string) (string, error) {
+func GetOneFaviconURL(urlStr string) string {
+
+	urlInfo, _ := url.Parse(urlStr)
+	fullUrl := urlInfo.Scheme + "://" + urlInfo.Host + "/favicon.ico"
+	return fullUrl
+
+}
+func GetOneFaviconURLByhead(urlStr string) (string, error) {
 	iconURLs, err := getFaviconURL(urlStr)
 	if err != nil {
 		return "", err

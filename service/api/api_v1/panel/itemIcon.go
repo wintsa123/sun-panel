@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sun-panel/api/api_v1/common/apiData/commonApiStructs"
 	"sun-panel/api/api_v1/common/apiData/panelApiStructs"
@@ -206,12 +207,7 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 	}
 	resp := panelApiStructs.ItemIconGetSiteFaviconResp{}
 	fullUrl := ""
-	if iconUrl, err := siteFavicon.GetOneFaviconURL(req.Url); err != nil {
-		apiReturn.Error(c, "acquisition failed: get ico error:"+err.Error())
-		return
-	} else {
-		fullUrl = iconUrl
-	}
+	fullUrl = siteFavicon.GetOneFaviconURL(req.Url)
 
 	parsedURL, err := url.Parse(req.Url)
 	if err != nil {
@@ -230,17 +226,7 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 		// 如果URL既不以http://开头也不以https://开头，则默认为http协议
 		fullUrl = "http://" + fullUrl
 	}
-	global.Logger.Debug("fullUrl:", fullUrl)
-	// 去除图标的get参数
-	{
-		parsedIcoURL, err := url.Parse(fullUrl)
-		if err != nil {
-			apiReturn.Error(c, "acquisition failed: parsed ico URL :"+err.Error())
-			return
-		}
-		fullUrl = parsedIcoURL.Scheme + "://" + parsedIcoURL.Host + parsedIcoURL.Path
-	}
-	global.Logger.Debug("fullUrl:", fullUrl)
+	global.Logger.Debug("fullUrl111:", fullUrl)
 
 	// 生成保存目录
 	configUpload := global.Config.GetValueString("base", "source_path")
@@ -253,13 +239,64 @@ func (a *ItemIcon) GetSiteFavicon(c *gin.Context) {
 	// 下载
 	var imgInfo *os.File
 	{
-		var err error
-		if imgInfo, err = siteFavicon.DownloadImage(fullUrl, savePath, 1024*1024); err != nil {
-			apiReturn.Error(c, "acquisition failed: download"+err.Error())
-			return
+		{
+			imgInfo, err = siteFavicon.DownloadImage(fullUrl, savePath, 1024*1024)
+			if err != nil {
+				u, err := url.Parse(fullUrl)
+				if err != nil {
+					// 处理 URL 解析错误
+					return
+				}
+
+				// 获取主机名
+				hostname := u.Hostname()
+
+				// 去掉子域名前缀
+				parts := strings.Split(hostname, ".")
+				if len(parts) > 2 {
+					hostname = strings.Join(parts[1:], ".")
+				}
+
+				// 构建新的 URL
+				newUrl := u.Scheme + "://" + hostname + u.RequestURI()
+				imgInfo, err = siteFavicon.DownloadImage(newUrl, savePath, 1024*1024)
+				// 重新尝试下载
+				if err != nil {
+					if iconUrl, err := siteFavicon.GetOneFaviconURLByhead(req.Url); err != nil {
+						apiReturn.Error(c, "acquisition failed: get ico error:"+err.Error())
+						return
+					} else {
+						fullUrl = iconUrl
+
+						u, err := url.Parse(fullUrl)
+						if err != nil {
+							// 处理 URL 解析错误
+							apiReturn.Error(c, "acquisition failed: get ico error:"+err.Error())
+
+							return
+						}
+
+						// 获取主机名
+						hostname := u.Hostname()
+						absolutePath := filepath.Clean(u.RequestURI())
+						// 构建新的 URL
+
+						newUrl := u.Scheme + "://" + hostname + absolutePath
+						newUrl = strings.ReplaceAll(newUrl, "\\", "/")
+						fmt.Println(newUrl)
+
+						imgInfo, err = siteFavicon.DownloadImage(newUrl, savePath, 1024*1024)
+						if err != nil {
+							fmt.Println(err)
+
+							apiReturn.Error(c, "acquisition failed: get ico error:"+err.Error())
+							return
+						}
+					}
+				}
+			}
 		}
 	}
-
 	// 保存到数据库
 	ext := path.Ext(fullUrl)
 	mFile := models.File{}
